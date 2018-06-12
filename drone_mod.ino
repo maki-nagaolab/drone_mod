@@ -1,27 +1,23 @@
+/* 
+drone_mod
 
-#include <SimpleTimer.h>
+
+*/
+
 #include <Wire.h>
 #include <VL53L0X.h>
 #include <SPI.h>
 #include <WiFi101.h>
 #include <WiFiUdp.h>
-
-int status = WL_IDLE_STATUS;
+#include <SimpleTimer.h>
 #include "arduino_secrets.h" 
 
+VL53L0X sensorF;
 VL53L0X sensorR;
 VL53L0X sensorL;
 VL53L0X sensorB;
 
-#define FRONT_LED_PIN A1
-#define BACK_LED_PIN  A0
-#define FSHUT 5 //2
-#define RSHUT 2 //5
-#define LSHUT 3
-#define BSHUT 4
-
-#define FPS      10
-#define INTERVAL int(1000 / FPS)
+int status = WL_IDLE_STATUS;
 
 char ssid[] = SECRET_SSID;   // your network SSID (name)
 char pass[] = SECRET_PASS;   // your network password (use for WPA, or use as key for WEP)
@@ -75,15 +71,31 @@ void setupWiFi() {
 }
 
 void setupToFSensor() {
+  pinMode(FSHUT, OUTPUT);
   pinMode(RSHUT, OUTPUT);
   pinMode(LSHUT, OUTPUT);
   pinMode(BSHUT, OUTPUT);
+  digitalWrite(FSHUT, LOW);
   digitalWrite(RSHUT, LOW);
   digitalWrite(LSHUT, LOW);
   digitalWrite(BSHUT, LOW);
  
   delay(100);
   Wire.begin();
+
+  pinMode(FSHUT, INPUT);
+  delay(150);
+  sensorF.init(true);
+  delay(100);
+  sensorF.setAddress((uint8_t)24);
+  sensorF.setTimeout(500);
+
+  pinMode(RSHUT, INPUT);
+  delay(150);
+  sensorR.init(true);
+  delay(100);
+  sensorR.setAddress((uint8_t)23);
+  sensorR.setTimeout(500);
  
   pinMode(LSHUT, INPUT);
   delay(150);
@@ -98,17 +110,11 @@ void setupToFSensor() {
   delay(100);
   sensorB.setAddress((uint8_t)25);
   sensorB.setTimeout(500);
- 
-  pinMode(RSHUT, INPUT);
-  delay(150);
-  sensorR.init(true);
-  delay(100);
-  sensorR.setAddress((uint8_t)23);
-  sensorR.setTimeout(500);
- 
+
+  sensorF.startContinuous();
+  sensorR.startContinuous();
   sensorL.startContinuous();
   sensorB.startContinuous();
-  sensorR.startContinuous();
   digitalWrite(13,LOW);
 
   timer.setInterval(10, MeasureDistance);
@@ -129,6 +135,8 @@ void LChika() {
 }
 
 void MeasureDistance() {
+  //Serial.print("F: ");
+  //Serial.print(sensorF.readRangeContinuousMillimeters());
   //Serial.print("R: ");
   //Serial.print(sensorR.readRangeContinuousMillimeters());
   //Serial.print(" L: ");
