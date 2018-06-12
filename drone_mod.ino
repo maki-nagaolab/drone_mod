@@ -17,17 +17,18 @@ VL53L0X sensorR;
 VL53L0X sensorL;
 VL53L0X sensorB;
 
-int status = WL_IDLE_STATUS;
 
 char ssid[] = SECRET_SSID;   // your network SSID (name)
 char pass[] = SECRET_PASS;   // your network password (use for WPA, or use as key for WEP)
 int keyIndex = 0;            // your network key Index number (needed only for WEP)
 
-unsigned int localPort = 2391;      // local port to listen on
+//unsigned int localPort = 2391;      // local port to listen on
 
 char packetBuffer[255];             //buffer to hold incoming packet
 
-WiFiUDP Udp;
+int status = WL_IDLE_STATUS;
+WiFiServer server(23);
+boolean alreadyConnected = false; // whether or not the client was connected previously
 
 int period = 0;
 //boolean front_output = HIGH;
@@ -62,12 +63,13 @@ void setupWiFi() {
     delay(10000);
   }
   //Serial.println("Connected to wifi");
-  //printWiFiStatus();
   digitalWrite(6, HIGH);digitalWrite(6, LOW);
 
   //Serial.println("\nStarting connection to server...");
   // if you get a connection, report back via serial:
-  Udp.begin(localPort);
+  server.begin();
+  //printWiFiStatus();
+  timer.setInterval(10, sendSensorData);
 }
 
 void setupToFSensor() {
@@ -143,15 +145,45 @@ void MeasureDistance() {
   //Serial.print(sensorL.readRangeContinuousMillimeters());
   //Serial.print(" B: ");
   //Serial.println(sensorB.readRangeContinuousMillimeters());
-  Udp.beginPacket("192.168.10.32", 2391); //nagaonet no surface no ip
-  Udp.write("R: ");
-  Udp.write(char(sensorR.readRangeContinuousMillimeters()));
-  Udp.write(" L: ");
-  Udp.write(char(sensorL.readRangeContinuousMillimeters()));
-  Udp.write(" B: ");
-  Udp.write(char(sensorB.readRangeContinuousMillimeters()));
+  //Udp.beginPacket("192.168.10.32", 2391); //nagaonet no surface no ip
+  //Udp.write("R: ");
+  //Udp.write(char(sensorR.readRangeContinuousMillimeters()));
+  //Udp.write(" L: ");
+  //Udp.write(char(sensorL.readRangeContinuousMillimeters()));
+  //Udp.write(" B: ");
+  //Udp.write(char(sensorB.readRangeContinuousMillimeters()));
 
-  Udp.endPacket();
+  //Udp.endPacket();
+}
+void sendSensorData() {
+  // wait for a new client:
+  WiFiClient client = server.available();
+
+  // when the client sends the first byte, say hello:
+  if (client) {
+    if (!alreadyConnected) {
+      // clead out the input buffer:
+      client.flush();
+      Serial.println("We have a new client");
+      client.println("Hello, client!");
+      alreadyConnected = true;
+    }
+
+    if (client.available() > 0) {
+      // read the bytes incoming from the client:
+      //char thisChar = client.read();
+      // echo the bytes to the server as well:
+      //Serial.write(thisChar);
+    }
+    server.write("F: ");
+    server.write(char(sensorF.readRangeContinuousMillimeters()));
+    server.write("R: ");
+    server.write(char(sensorR.readRangeContinuousMillimeters()));
+    server.write("L: ");
+    server.write(char(sensorL.readRangeContinuousMillimeters()));
+    server.write("B: ");
+    server.write(char(sensorB.readRangeContinuousMillimeters()));
+  }
 }
 
 void printWiFiStatus() {
@@ -172,7 +204,6 @@ void printWiFiStatus() {
 }
 
 void setup() {
-  // put your setup code here, to run once:
   //Serial.begin(19200);
   pinMode(6, OUTPUT);
   setupWiFi();
@@ -181,7 +212,6 @@ void setup() {
 }
 
 void loop() {
-  // put your main code here, to run repeatedly:
   timer.run();
 }
 
